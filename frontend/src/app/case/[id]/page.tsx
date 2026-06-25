@@ -78,12 +78,20 @@ export default function CasePage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     if (session) {
       fetch(`/api/cases/${id}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === 401) {
+            router.push("/sign-in");
+            return null;
+          }
+          return res.json();
+        })
         .then((data) => {
-          if (data.error) {
-            setError(data.error);
-          } else {
-            setCaseData(data.case);
+          if (data) {
+            if (data.error) {
+              setError(data.error);
+            } else {
+              setCaseData(data.case);
+            }
           }
         })
         .catch((err) => {
@@ -92,7 +100,7 @@ export default function CasePage({ params }: { params: Promise<{ id: string }> }
         })
         .finally(() => setLoading(false));
     }
-  }, [id, session]);
+  }, [id, session, router]);
 
   // Polling for in-progress analysis
   useEffect(() => {

@@ -56,16 +56,22 @@ export default function DashboardPage() {
   useEffect(() => {
     if (session) {
       fetch("/api/cases")
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === 401) {
+            router.push("/sign-in");
+            return null;
+          }
+          return res.json();
+        })
         .then((data) => {
-          if (data.cases) {
+          if (data && data.cases) {
             setCases(data.cases);
           }
         })
         .catch((err) => console.error("Error fetching cases:", err))
         .finally(() => setLoadingCases(false));
     }
-  }, [session]);
+  }, [session, router]);
 
   // Show general page loading if session or initial cases are pending
   if (sessionPending || (loadingCases && cases.length === 0)) {
