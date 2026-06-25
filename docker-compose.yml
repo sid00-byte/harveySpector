@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: harvey-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: harvey
+      POSTGRES_PASSWORD: harvey123
+      POSTGRES_DB: harveyspecter
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U harvey -d harveyspecter"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: harvey-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://harvey:harvey123@db:5432/harveyspecter
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CORS_ORIGINS: http://localhost:3000
+      UPLOAD_DIR: /app/uploads
+      MAX_FILE_SIZE_MB: 50
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - uploads:/app/uploads
+      - ./backend/data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Next.js Frontend (dev mode)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: harvey-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-harvey-dev-secret-change-in-production}
+      BETTER_AUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://harvey:harvey123@db:5432/harveyspecter
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:

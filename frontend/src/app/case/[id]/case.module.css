@@ -1,0 +1,445 @@
+.casePage {
+  min-height: 100vh;
+  padding: 6rem 1.5rem 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+  background: var(--bg-primary);
+}
+
+/* ── Header ─────────────────────────────────── */
+.caseHeader {
+  margin-bottom: 2rem;
+}
+
+.backLink {
+  display: inline-block;
+  font-size: 0.813rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  transition: color 0.2s ease;
+}
+
+.backLink:hover {
+  color: var(--accent-primary);
+}
+
+.caseTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+  line-height: 1.3;
+}
+
+.caseMeta {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.813rem;
+  color: var(--text-muted);
+}
+
+.caseId {
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* ── Summary Section ────────────────────────── */
+.summarySection {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.scoreRingLarge {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.scoreSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.scoreNumber {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-jetbrains), monospace;
+}
+
+.statCounts {
+  display: flex;
+  gap: 1rem;
+}
+
+.miniStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.miniStatIcon {
+  font-size: 0.875rem;
+}
+
+.miniStatVal {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.miniStatLabel {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summaryTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem;
+}
+
+.summaryBody {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Forms Section ──────────────────────────── */
+.formsSection {
+  margin-bottom: 1.5rem;
+}
+
+.sectionHeading {
+  font-size: 1.063rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem;
+}
+
+.formsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.formCard {
+  padding: 0.625rem 1.25rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 10px;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.formCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+}
+
+.formName {
+  font-size: 0.938rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* ── Findings ───────────────────────────────── */
+.findingsSection {
+  margin-bottom: 2rem;
+}
+
+.findingsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.finding {
+  padding: 1.5rem;
+  border-radius: 14px;
+  border-left: 5px solid;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border-primary);
+  border-right: 1px solid var(--border-primary);
+  border-bottom: 1px solid var(--border-primary);
+  transition: transform 0.15s ease;
+}
+
+.finding:hover {
+  transform: translateX(4px);
+}
+
+.findingCompliant { border-left-color: var(--status-success); }
+.findingNonCompliant { border-left-color: var(--status-error); }
+.findingWarning { border-left-color: var(--status-warning); }
+
+.findingHeader {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.findingIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.findingTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.findingTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.findingBadge {
+  padding: 0.2rem 0.625rem;
+  border-radius: 20px;
+  font-size: 0.688rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badgeGreen {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--status-success);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badgeRed {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--status-error);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.badgeYellow {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--status-warning);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.findingDesc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 1rem;
+  padding-left: 2rem;
+}
+
+/* ── References ─────────────────────────────── */
+.refsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+  padding-left: 2rem;
+}
+
+.refsLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.refsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.refCode {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* ── Suggestion ─────────────────────────────── */
+.suggestionBlock {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 10px;
+  margin-left: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.suggestionIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.suggestionLabel {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--status-success);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.suggestionText {
+  font-size: 0.813rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Finding Forms ──────────────────────────── */
+.findingForms {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  padding-left: 2rem;
+}
+
+.findingFormTag {
+  padding: 0.15rem 0.5rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 4px;
+  font-size: 0.688rem;
+  font-weight: 600;
+  color: var(--status-warning);
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* ── Actions ────────────────────────────────── */
+.actionsSection {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  padding: 2rem 0;
+  border-top: 1px solid var(--border-primary);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(135deg, var(--accent-primary), #2563eb);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.938rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.actionBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+}
+
+.actionBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  font-size: 0.938rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionBtnSecondary:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 768px) {
+  .summarySection {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .scoreBlock {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .findingDesc,
+  .refsBlock,
+  .suggestionBlock,
+  .findingForms {
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  .actionsSection {
+    flex-direction: column;
+  }
+
+  .actionBtn,
+  .actionBtnSecondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .casePage {
+    padding: 5rem 1rem 2rem;
+  }
+
+  .caseTitle {
+    font-size: 1.25rem;
+  }
+}

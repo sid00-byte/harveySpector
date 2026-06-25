@@ -1,0 +1,177 @@
+// HarveySpecter — Prisma Schema
+// Database: PostgreSQL with pgvector extension
+// Auth: Better Auth (manages its own tables via its adapter)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Better Auth Tables ─────────────────────────────
+// These are required by Better Auth's Prisma adapter
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  firm          String?   // CA/CS firm name
+  role          String    @default("professional") // professional | admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  cases         Case[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
+}
+
+// ─── Application Tables ─────────────────────────────
+
+model Case {
+  id          String     @id @default(cuid())
+  title       String     // e.g., "ABC Ltd — Share Transfer"
+  description String?
+  status      String     @default("pending") // pending | analyzing | completed | archived
+  userId      String
+  tags        String[]   // e.g., ["share-transfer", "section-56"]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    Document[]
+  analyses     Analysis[]
+  chatMessages ChatMessage[]
+
+  @@map("cases")
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  caseId        String
+  fileName      String
+  fileType      String   // pdf | image | docx | text
+  fileUrl       String?  // Storage URL
+  extractedText String?  @db.Text
+  pageCount     Int?
+  fileSizeBytes Int
+  status        String   @default("pending") // pending | processing | completed | failed
+  createdAt     DateTime @default(now())
+
+  case     Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  analyses Analysis[]
+
+  @@map("documents")
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  caseId          String
+  documentId      String?
+  status          String   @default("processing") // processing | completed | failed
+  complianceScore Float?   // 0-100
+  report          Json?    // Full structured compliance report
+  references      Json?    // Array of Act references used
+  suggestions     Json?    // Workarounds and fixes
+  requiredForms   String[] // e.g., ["AOC-4", "MGT-14"]
+  processingTimeMs Int?
+  llmModel        String?  // Model used for this analysis
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  case     Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id])
+
+  @@map("analyses")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  caseId     String
+  role       String   // user | assistant
+  content    String   @db.Text
+  references Json?    // Inline Act references in this message
+  createdAt  DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model ActChunk {
+  id               Int                         @id @default(autoincrement())
+  chunk_id         String                      @unique @map("chunk_id")
+  document_name    String                      @default("Companies Act, 2013") @map("document_name")
+  chapter_number   String?                     @map("chapter_number")
+  chapter_title    String?                     @map("chapter_title")
+  section_number   String?                     @map("section_number")
+  section_title    String?                     @map("section_title")
+  subsection       String?                     @map("subsection")
+  text             String                      @map("text")
+  page_number      Int?                        @map("page_number")
+  line_start       Int?                        @map("line_start")
+  line_end         Int?                        @map("line_end")
+  parent_chunk_id  String?                     @map("parent_chunk_id")
+  related_sections String[]                    @map("related_sections")
+  related_forms    String[]                    @map("related_forms")
+  related_rules    String[]                    @map("related_rules")
+  amendment_info   String?                     @map("amendment_info")
+  keywords         String[]                    @map("keywords")
+  embedding        Unsupported("vector(768)")?
+  created_at       DateTime?                   @default(now()) @map("created_at")
+  updated_at       DateTime?                   @default(now()) @map("updated_at")
+
+  @@map("act_chunks")
+}
+
