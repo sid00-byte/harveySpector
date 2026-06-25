@@ -212,6 +212,49 @@ async function runTest() {
       throw new Error("Polling timed out before analysis could complete.");
     }
 
+    // 8. Test the Chat Feature on Render Backend
+    console.log("\n8. Testing the chat feature on Render backend...");
+    const chatMsg = "What are the rules for related party transactions under the Act?";
+    const chatRes = await fetch(`${BACKEND_URL}/api/v1/chat/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        case_id: caseId,
+        message: chatMsg,
+        history: []
+      })
+    });
+
+    if (!chatRes.ok) {
+      const errText = await chatRes.text();
+      throw new Error(`Chat API request failed (HTTP ${chatRes.status}): ${errText}`);
+    }
+
+    const chatData = await chatRes.json();
+    console.log(`✅ Chat response received successfully.`);
+    console.log(`💬 Reply excerpt: ${chatData.reply.substring(0, 150)}...`);
+
+    // 9. Fetch Chat History
+    console.log("\n9. Fetching chat history from Render backend...");
+    const historyRes = await fetch(`${BACKEND_URL}/api/v1/chat/history/${caseId}`);
+    if (!historyRes.ok) {
+      const errText = await historyRes.text();
+      throw new Error(`Chat history request failed (HTTP ${historyRes.status}): ${errText}`);
+    }
+
+    const historyData = await historyRes.json();
+    console.log(`✅ Chat history retrieved. Messages count: ${historyData.total_messages}`);
+    if (historyData.total_messages >= 2) {
+      console.log("   - User Message:      " + historyData.messages[0].content);
+      console.log("   - Assistant Message: " + historyData.messages[1].content.substring(0, 100) + "...");
+    } else {
+      throw new Error("Chat history is missing expected messages.");
+    }
+    
+    console.log("\n🎉 ALL E2E AND CHAT CHECKS COMPLETED SUCCESSFULLY!");
+
   } catch (error) {
     console.error("\n❌ LIVE E2E TEST FAILED WITH ERROR:", error);
   }

@@ -180,8 +180,14 @@ class VectorStore:
                     CREATE INDEX IF NOT EXISTS ix_chat_case_time
                     ON chat_messages (case_id, created_at);
                 """)
-            except Exception as exc:
-                logger.warning("Could not create chat messages index: %s", exc)
+            except Exception:
+                try:
+                    await conn.execute("""
+                        CREATE INDEX IF NOT EXISTS ix_chat_case_time
+                        ON chat_messages ("caseId", "createdAt");
+                    """)
+                except Exception as exc:
+                    logger.warning("Could not create chat messages index: %s", exc)
 
         logger.info("Database tables verified / created")
 
