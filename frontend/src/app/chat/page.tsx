@@ -38,7 +38,7 @@ export default function ChatPage() {
       content:
         "Hello! I'm your Companies Act 2013 compliance assistant. Ask me anything about the Act — I'll provide precise section, page, and line references for every answer.\n\nFor example, try:\n• \"What are the requirements for appointing a director?\"\n• \"Explain Section 185 on loans to directors\"\n• \"What forms are needed for share transfer?\"",
       citations: [],
-      timestamp: new Date().toISOString(),
+      timestamp: "2026-06-25T00:00:00.000Z",
     },
   ]);
   const [input, setInput] = useState("");
