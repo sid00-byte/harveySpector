@@ -45,14 +45,17 @@ interface CaseDetails {
 }
 
 function statusIcon(status: string) {
-  if (status === "COMPLIANT") return "✅";
-  if (status === "NON_COMPLIANT") return "❌";
+  const norm = status?.toUpperCase();
+  if (norm === "COMPLIANT") return "✅";
+  if (norm === "NON_COMPLIANT") return "❌";
   return "⚠️";
 }
 
 function statusLabel(status: string) {
-  if (status === "COMPLIANT") return "Compliant";
-  if (status === "NON_COMPLIANT") return "Non-Compliant";
+  const norm = status?.toUpperCase();
+  if (norm === "COMPLIANT") return "Compliant";
+  if (norm === "NON_COMPLIANT") return "Non-Compliant";
+  if (norm === "NEEDS_REVIEW") return "Needs Review";
   return "Warning";
 }
 
@@ -209,9 +212,12 @@ export default function CasePage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const compliant = report.items.filter((i) => i.status === "COMPLIANT").length;
-  const nonCompliant = report.items.filter((i) => i.status === "NON_COMPLIANT").length;
-  const warnings = report.items.filter((i) => i.status === "WARNING").length;
+  const compliant = report.items.filter((i) => i.status?.toUpperCase() === "COMPLIANT").length;
+  const nonCompliant = report.items.filter((i) => i.status?.toUpperCase() === "NON_COMPLIANT").length;
+  const warnings = report.items.filter((i) => {
+    const s = i.status?.toUpperCase();
+    return s === "WARNING" || s === "NEEDS_REVIEW";
+  }).length;
 
   const displayDate = new Date(caseData.createdAt).toLocaleDateString("en-IN", {
     year: "numeric",
@@ -297,8 +303,8 @@ export default function CasePage({ params }: { params: Promise<{ id: string }> }
             <article
               key={idx}
               className={`${styles.finding} ${
-                item.status === "COMPLIANT" ? styles.findingCompliant :
-                item.status === "NON_COMPLIANT" ? styles.findingNonCompliant :
+                item.status?.toUpperCase() === "COMPLIANT" ? styles.findingCompliant :
+                item.status?.toUpperCase() === "NON_COMPLIANT" ? styles.findingNonCompliant :
                 styles.findingWarning
               }`}
               id={`finding-${idx}`}
@@ -308,8 +314,8 @@ export default function CasePage({ params }: { params: Promise<{ id: string }> }
                 <div className={styles.findingTitleBlock}>
                   <h3 className={styles.findingTitle}>{item.title}</h3>
                   <span className={`${styles.findingBadge} ${
-                    item.status === "COMPLIANT" ? styles.badgeGreen :
-                    item.status === "NON_COMPLIANT" ? styles.badgeRed :
+                    item.status?.toUpperCase() === "COMPLIANT" ? styles.badgeGreen :
+                    item.status?.toUpperCase() === "NON_COMPLIANT" ? styles.badgeRed :
                     styles.badgeYellow
                   }`}>
                     {statusLabel(item.status)}
