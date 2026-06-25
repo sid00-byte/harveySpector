@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const SITE_URL = "https://harvey-spector-mr3f75ep9-sid00-bytes-projects.vercel.app";
+const SITE_URL = "https://harvey-spector-ds1yp8yzr-sid00-bytes-projects.vercel.app";
 const BACKEND_URL = "https://harveyspector-nq1f.onrender.com";
 const SAMPLE_FILE_PATH = "/Users/siddharth/harveySpector/sample_board_resolution.docx";
 

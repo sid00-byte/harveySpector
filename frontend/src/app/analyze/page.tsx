@@ -76,6 +76,10 @@ export default function AnalyzePage() {
         }),
       });
 
+      if (caseRes.status === 401) {
+        router.push("/sign-in");
+        return;
+      }
       if (!caseRes.ok) throw new Error("Could not initialize case in database");
       const caseData = await caseRes.json();
       createdCaseId = caseData.case.id;
@@ -137,6 +141,10 @@ export default function AnalyzePage() {
           }),
         });
 
+        if (saveAnalysisRes.status === 401) {
+          router.push("/sign-in");
+          return;
+        }
         if (!saveAnalysisRes.ok) {
           console.error("Failed to persist analysis placeholder to DB");
         }
