@@ -7,6 +7,8 @@ GET  /history/{case_id} → retrieve conversation history for a case
 
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -28,6 +30,7 @@ from app.services.embeddings import EmbeddingService
 from app.services.citation_verifier import CitationVerifier
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # In-memory chat store for MVP
 _chat_store: dict[str, list[dict[str, Any]]] = {}
@@ -52,8 +55,19 @@ async def send_message(
     embedding_service = EmbeddingService()
     verifier = CitationVerifier(vector_store=vector_store)
 
-    # Get conversation history
-    history = _chat_store.get(request.case_id, [])
+    # Get conversation history from database, fallback to in-memory
+    try:
+        db_history = await vector_store.get_chat_history(request.case_id)
+        if db_history:
+            history = [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in db_history
+            ]
+        else:
+            history = _chat_store.get(request.case_id, [])
+    except Exception as exc:
+        logger.warning("Could not retrieve chat history from database: %s", exc)
+        history = _chat_store.get(request.case_id, [])
 
     # Generate query embedding and search for relevant Act chunks
     try:
@@ -83,10 +97,7 @@ async def send_message(
     context = "\n\n---\n\n".join(context_parts) if context_parts else ""
 
     # Build history for the LLM
-    llm_history = [
-        {"role": msg["role"], "content": msg["content"]}
-        for msg in history[-10:]  # Last 10 messages for context
-    ]
+    llm_history = history[-10:]  # Last 10 messages for context
 
     # Generate response
     try:
@@ -96,10 +107,15 @@ async def send_message(
             history=llm_history,
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Chat response generation failed: {exc}",
-        ) from exc
+        logger.warning("Gemini chat response failed: %s. Using rate-limit fallback reply.", exc)
+        reply = (
+            "⚠️ **Gemini API Limit Exceeded / Service Congestion**\n\n"
+            "I'm currently unable to generate a real-time response from the Gemini model "
+            "because the free-tier API quota limit has been reached or the service is experiencing high demand.\n\n"
+            f"**Your Question**: \"{request.message}\"\n\n"
+            "**Retrieved Companies Act Context**:\n"
+            + (context[:1500] + "..." if context else "[No relevant sections found in the knowledge base]")
+        )
 
     # Verify citations in the response
     try:
@@ -107,7 +123,24 @@ async def send_message(
     except Exception:
         verified_citations = []
 
-    # Store messages
+    # Store messages in database
+    try:
+        await vector_store.store_chat_message(
+            case_id=request.case_id,
+            role="user",
+            content=request.message,
+            citations_json=[]
+        )
+        await vector_store.store_chat_message(
+            case_id=request.case_id,
+            role="assistant",
+            content=reply,
+            citations_json=[c.model_dump() for c in verified_citations]
+        )
+    except Exception as exc:
+        logger.warning("Could not persist chat messages to database: %s", exc)
+
+    # Keep in-memory store as fallback
     now = datetime.now(timezone.utc).isoformat()
     if request.case_id not in _chat_store:
         _chat_store[request.case_id] = []
@@ -152,15 +185,56 @@ async def send_message(
     response_model=ChatHistoryResponse,
     summary="Get chat history for a case",
 )
-async def get_chat_history(case_id: str) -> ChatHistoryResponse:
+async def get_chat_history(
+    case_id: str,
+    req: Request,
+) -> ChatHistoryResponse:
     """Retrieve all messages in a conversation by case ID."""
+    vector_store: VectorStore = req.app.state.vector_store
+
+    try:
+        db_history = await vector_store.get_chat_history(case_id)
+        if db_history:
+            chat_messages = []
+            for msg in db_history:
+                citations_raw = msg.get("citations_json") or []
+                if isinstance(citations_raw, str):
+                    try:
+                        citations_raw = json.loads(citations_raw)
+                    except Exception:
+                        citations_raw = []
+
+                ts = msg.get("created_at") or datetime.utcnow()
+                if isinstance(ts, str):
+                    try:
+                        ts = datetime.fromisoformat(ts)
+                    except Exception:
+                        ts = datetime.utcnow()
+
+                chat_messages.append(
+                    ChatMessage(
+                        role=msg["role"],
+                        content=msg["content"],
+                        timestamp=ts,
+                        citations=[VerifiedCitation(**c) for c in citations_raw],
+                    )
+                )
+            return ChatHistoryResponse(
+                case_id=case_id,
+                messages=chat_messages,
+                total_messages=len(chat_messages),
+            )
+    except Exception as exc:
+        logger.warning("Failed to retrieve chat history from database: %s", exc)
+
+    # Fallback to in-memory store
     messages = _chat_store.get(case_id, [])
 
     chat_messages = [
         ChatMessage(
             role=msg["role"],
             content=msg["content"],
-            timestamp=datetime.fromisoformat(msg["timestamp"]),
+            timestamp=datetime.fromisoformat(msg["timestamp"]) if isinstance(msg["timestamp"], str) else msg["timestamp"],
             citations=[VerifiedCitation(**c) for c in msg.get("citations", [])],
         )
         for msg in messages

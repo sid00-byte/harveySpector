@@ -573,13 +573,15 @@ class VectorStore:
                 self._sqlite_store_chat_message, case_id, role, content, citations_json
             )
 
+        import uuid
+        msg_id = f"msg-{uuid.uuid4().hex[:12]}"
         async with self.pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO chat_messages (case_id, role, content, citations_json)
-                VALUES ($1, $2, $3, $4::jsonb);
+                INSERT INTO chat_messages (id, "caseId", role, content, "references")
+                VALUES ($1, $2, $3, $4, $5::jsonb);
                 """,
-                case_id, role, content,
+                msg_id, case_id, role, content,
                 json.dumps(citations_json or []),
             )
 
@@ -591,10 +593,10 @@ class VectorStore:
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT role, content, citations_json, created_at
+                SELECT role, content, "references" AS citations_json, "createdAt" AS created_at
                 FROM chat_messages
-                WHERE case_id = $1
-                ORDER BY created_at ASC;
+                WHERE "caseId" = $1
+                ORDER BY "createdAt" ASC;
                 """,
                 case_id,
             )
