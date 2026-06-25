@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # ── Gemini / LLM ──────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-flash-lite-latest"
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-2"
     GEMINI_EMBEDDING_DIMENSION: int = 768
 
