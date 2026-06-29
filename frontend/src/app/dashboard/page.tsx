@@ -116,6 +116,7 @@ function DashboardContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const welcomeFileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const skipHistoryLoadRef = useRef(false);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -229,6 +230,12 @@ function DashboardContent() {
           if (caseData.case.status === "analyzing" || caseData.case.status === "processing") {
             startPollingStatus(caseData.case.id);
           }
+        }
+
+        // Skip history loading if this is a newly created on-the-fly case session
+        if (skipHistoryLoadRef.current) {
+          skipHistoryLoadRef.current = false;
+          return;
         }
 
         // 2. Fetch Chat Q&A history from FastAPI Backend
@@ -524,6 +531,7 @@ function DashboardContent() {
         currentCaseId = caseData.case.id;
 
         // Switch workspace and update sidebar case list
+        skipHistoryLoadRef.current = true;
         setActiveCaseId(currentCaseId);
         setIsNewCaseMode(false);
         setCases((prev) => [caseData.case, ...prev]);
