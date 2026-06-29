@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./chat.module.css";
 
 interface Citation {
@@ -32,6 +33,19 @@ function parseCitations(text: string): string {
 }
 
 export default function ChatPage() {
+  const router = useRouter();
+
+  // Redirect to dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("caseId");
+    if (id) {
+      router.replace(`/dashboard?caseId=${id}`);
+    } else {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",

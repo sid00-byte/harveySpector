@@ -61,8 +61,14 @@ function statusLabel(status: string) {
 
 export default function CasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: session, isPending: sessionPending } = useSession();
   const router = useRouter();
+
+  // Redirect to unified workspace
+  useEffect(() => {
+    router.replace(`/dashboard?caseId=${id}`);
+  }, [id, router]);
+
+  const { data: session, isPending: sessionPending } = useSession();
   const [caseData, setCaseData] = useState<CaseDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

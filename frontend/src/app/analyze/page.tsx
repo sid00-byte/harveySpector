@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./analyze.module.css";
 
@@ -26,6 +26,13 @@ interface AnalysisResult {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function AnalyzePage() {
+  const router = useRouter();
+
+  // Redirect to dashboard new audit flow
+  useEffect(() => {
+    router.replace("/dashboard?action=new");
+  }, [router]);
+
   const [mode, setMode] = useState<InputMode>("upload");
   const [state, setState] = useState<AnalysisState>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -34,7 +41,6 @@ export default function AnalyzePage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
