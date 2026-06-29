@@ -106,7 +106,7 @@ class VectorStore:
                 logger.error("Could not create act_chunks table: %s", exc)
                 raise exc
 
-            # Full-text search index using GIN
+             # Full-text search index using GIN
             try:
                 await conn.execute("""
                     CREATE INDEX IF NOT EXISTS ix_act_chunks_fts
@@ -114,6 +114,17 @@ class VectorStore:
                 """)
             except Exception as exc:
                 logger.warning("Could not create GIN index: %s", exc)
+
+            # Metadata indexes for fast lookups
+            try:
+                await conn.execute("""
+                    CREATE INDEX IF NOT EXISTS ix_act_chunks_sec_num ON act_chunks (section_number);
+                """)
+                await conn.execute("""
+                    CREATE INDEX IF NOT EXISTS ix_act_chunks_chap_num ON act_chunks (chapter_number);
+                """)
+            except Exception as exc:
+                logger.warning("Could not create metadata indexes: %s", exc)
 
             # Vector similarity index (IVFFlat)
             try:
