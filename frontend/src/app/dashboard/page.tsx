@@ -114,6 +114,7 @@ function DashboardContent() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const welcomeFileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -832,12 +833,12 @@ function DashboardContent() {
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => welcomeFileInputRef.current?.click()}
                   style={{ maxWidth: "560px", margin: "1.5rem auto", padding: "1.5rem", width: "100%" }}
                   id="chat-dropzone"
                 >
                   <input
-                    ref={fileInputRef}
+                    ref={welcomeFileInputRef}
                     type="file"
                     accept=".pdf,.docx,.doc,.txt"
                     onChange={handleFileSelect}
