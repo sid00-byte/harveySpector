@@ -147,20 +147,10 @@ function DashboardContent() {
       if (data && data.cases) {
         setCases(data.cases);
         
-        // Handle selecting initial case ID from search params or selectIdAfterLoad
-        const targetId = selectIdAfterLoad || initialCaseId;
-        if (targetId) {
-          const match = data.cases.find((c: CaseItem) => c.id === targetId);
-          if (match) {
-            setActiveCaseId(targetId);
-            setIsNewCaseMode(false);
-          }
-        } else if (initialAction === "new") {
-          setIsNewCaseMode(true);
-          setActiveCaseId(null);
-        } else if (data.cases.length > 0 && !activeCaseId && !isNewCaseMode) {
-          // Auto select first case on load
-          setActiveCaseId(data.cases[0].id);
+        // Handle selecting case explicitly requested after creation
+        if (selectIdAfterLoad) {
+          setActiveCaseId(selectIdAfterLoad);
+          setIsNewCaseMode(false);
         }
       }
     } catch (err) {
@@ -168,7 +158,7 @@ function DashboardContent() {
     } finally {
       setLoadingCases(false);
     }
-  }, [session, initialCaseId, initialAction, activeCaseId, isNewCaseMode, router]);
+  }, [session, router]);
 
   // Initial Load
   useEffect(() => {
@@ -176,6 +166,32 @@ function DashboardContent() {
       loadSidebarCases();
     }
   }, [session, loadSidebarCases]);
+
+  // Auto-select case on initial mount once cases are loaded
+  useEffect(() => {
+    if (loadingCases || cases.length === 0) return;
+
+    // Only run if we haven't selected a case yet and aren't explicitly in new case mode
+    if (!activeCaseId && !isNewCaseMode) {
+      const targetId = initialCaseId;
+      if (targetId) {
+        const match = cases.find((c) => c.id === targetId);
+        if (match) {
+          setActiveCaseId(targetId);
+          setIsNewCaseMode(false);
+        } else {
+          setActiveCaseId(cases[0].id);
+        }
+      } else if (initialAction === "new") {
+        setIsNewCaseMode(true);
+        setActiveCaseId(null);
+      } else {
+        // Auto select first case
+        setActiveCaseId(cases[0].id);
+        setIsNewCaseMode(false);
+      }
+    }
+  }, [loadingCases, cases, activeCaseId, isNewCaseMode, initialCaseId, initialAction]);
 
   // Handle active case change (load details & chat history)
   useEffect(() => {
