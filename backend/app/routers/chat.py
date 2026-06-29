@@ -69,6 +69,86 @@ async def send_message(
         logger.warning("Could not retrieve chat history from database: %s", exc)
         history = _chat_store.get(request.case_id, [])
 
+    # Fetch case document text and latest report to build a rich grounding context
+    document_text = ""
+    doc_name = ""
+    latest_report = None
+    compliance_score = None
+
+    try:
+        if vector_store._is_fallback:
+            # Query SQLite for document and latest report
+            with vector_store._get_sqlite_conn() as conn:
+                # Get document text
+                doc_row = conn.execute(
+                    """
+                    SELECT text_content, file_name 
+                    FROM documents 
+                    WHERE case_id = ? 
+                    LIMIT 1;
+                    """,
+                    (request.case_id,)
+                ).fetchone()
+                if doc_row:
+                    document_text = doc_row["text_content"] or ""
+                    doc_name = doc_row["file_name"] or ""
+                
+                # Get latest analysis report
+                analysis_row = conn.execute(
+                    """
+                    SELECT report_json 
+                    FROM analyses 
+                    WHERE case_id = ? AND status = 'COMPLETED' 
+                    ORDER BY created_at DESC 
+                    LIMIT 1;
+                    """,
+                    (request.case_id,)
+                ).fetchone()
+                if analysis_row:
+                    latest_report = json.loads(analysis_row["report_json"]) if analysis_row["report_json"] else None
+        else:
+            # Query PostgreSQL connection
+            async with vector_store.pool.acquire() as conn:
+                # Try Prisma schema for document
+                try:
+                    doc_row = await conn.fetchrow(
+                        'SELECT "extractedText" AS text, "fileName" AS name FROM documents WHERE "caseId" = $1 LIMIT 1;',
+                        request.case_id
+                    )
+                    if doc_row:
+                        document_text = doc_row["text"] or ""
+                        doc_name = doc_row["name"] or ""
+                except Exception:
+                    # Fallback to snake_case schema for document
+                    doc_row = await conn.fetchrow(
+                        'SELECT extracted_text AS text, file_name AS name FROM documents WHERE case_id = $1 LIMIT 1;',
+                        request.case_id
+                    )
+                    if doc_row:
+                        document_text = doc_row["text"] or ""
+                        doc_name = doc_row["name"] or ""
+
+                # Try Prisma schema for analysis report
+                try:
+                    analysis_row = await conn.fetchrow(
+                        'SELECT report, "complianceScore" AS score FROM analyses WHERE "caseId" = $1 AND status = \'completed\' ORDER BY "createdAt" DESC LIMIT 1;',
+                        request.case_id
+                    )
+                    if analysis_row:
+                        latest_report = analysis_row["report"]
+                        compliance_score = analysis_row["score"]
+                except Exception:
+                    # Fallback to snake_case schema for analysis report
+                    analysis_row = await conn.fetchrow(
+                        'SELECT report_json AS report, compliance_score AS score FROM analyses WHERE case_id = $1 AND status = \'completed\' ORDER BY created_at DESC LIMIT 1;',
+                        request.case_id
+                    )
+                    if analysis_row:
+                        latest_report = analysis_row["report"]
+                        compliance_score = analysis_row["score"]
+    except Exception as exc:
+        logger.warning("Could not retrieve document text or report from database: %s", exc)
+
     # Generate query embedding and search for relevant Act chunks
     try:
         query_embedding = await embedding_service.generate_embedding(request.message)
@@ -85,8 +165,58 @@ async def send_message(
     except Exception:
         relevant_chunks = []
 
-    # Build context from relevant chunks
+    # Build context from relevant chunks, document text, and report findings
     context_parts: list[str] = []
+
+    # 1. Add details about the current audited document if available
+    if doc_name and document_text:
+        context_parts.append(
+            f"AUDITED DOCUMENT DETAILS:\n"
+            f"Document Name: {doc_name}\n"
+            f"Extracted Content Snippet:\n{document_text[:4000]}"
+        )
+
+    # 2. Add details about the compliance analysis report if available
+    if latest_report:
+        findings_summary = []
+        if isinstance(latest_report, str):
+            try:
+                latest_report = json.loads(latest_report)
+            except Exception:
+                pass
+        
+        if isinstance(latest_report, dict):
+            comp_score = latest_report.get("compliance_score", compliance_score)
+            summary = latest_report.get("summary", "")
+            items = latest_report.get("items", [])
+            required_forms = latest_report.get("required_forms", [])
+            
+            findings_summary.append(f"Compliance Score: {comp_score}%")
+            findings_summary.append(f"Analysis Summary: {summary}")
+            if required_forms:
+                findings_summary.append(f"Required Forms: {', '.join(required_forms)}")
+            
+            findings_summary.append("Detailed Findings:")
+            for item in items:
+                status = item.get("status", "N/A")
+                title = item.get("title", "")
+                desc = item.get("description", "")
+                sugg = item.get("suggestion", "")
+                refs = []
+                for r in item.get("references", []):
+                    refs.append(f"Section {r.get('section', 'N/A')}")
+                
+                findings_summary.append(
+                    f"- [{status}] {title}: {desc}\n"
+                    f"  Legal Citations: {', '.join(refs)}\n"
+                    f"  Recommended Fix: {sugg}"
+                )
+        
+        context_parts.append(
+            f"COMPLIANCE REPORT FINDINGS:\n" + "\n".join(findings_summary)
+        )
+
+    # 3. Add retrieved sections from Companies Act, 2013
     for chunk in relevant_chunks:
         context_parts.append(
             f"[Section {chunk.section_number or 'N/A'}, "
