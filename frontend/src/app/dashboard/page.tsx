@@ -494,7 +494,52 @@ function DashboardContent() {
   // Send a Chat Message Q&A
   const handleSend = async () => {
     const msg = chatInput.trim();
-    if (!msg || chatLoading || !activeCaseId) return;
+    if (!msg || chatLoading) return;
+
+    let currentCaseId = activeCaseId;
+
+    // 1. If no case selected, create a new case session on the fly!
+    if (!currentCaseId) {
+      setChatLoading(true);
+      try {
+        const caseRes = await fetch("/api/cases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: `Chat: ${msg.substring(0, 30)}${msg.length > 30 ? "..." : ""}`,
+            description: "General legal chat session",
+            fileName: "",
+            fileType: "",
+            fileSizeBytes: 0,
+          }),
+        });
+
+        if (caseRes.status === 401) {
+          router.push("/sign-in");
+          return;
+        }
+        if (!caseRes.ok) throw new Error("Could not initialize case in database");
+        const caseData = await caseRes.json();
+        currentCaseId = caseData.case.id;
+
+        // Switch workspace and update sidebar case list
+        setActiveCaseId(currentCaseId);
+        setIsNewCaseMode(false);
+        setCases((prev) => [caseData.case, ...prev]);
+      } catch (err) {
+        console.error("Failed to create chat session case:", err);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "⚠️ Failed to initialize a new chat session database record.",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        setChatLoading(false);
+        return;
+      }
+    }
 
     const userMessage: Message = {
       role: "user",
@@ -511,7 +556,7 @@ function DashboardContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          case_id: activeCaseId,
+          case_id: currentCaseId,
           message: msg,
           history: chatMessages.map((m) => ({
             role: m.role,
@@ -706,64 +751,8 @@ function DashboardContent() {
 
       {/* ── MIDDLE COLUMN: CHAT WINDOW ── */}
       <main className={styles.chatArea}>
-        {/* Onboarding Empty Screen or Workspace Greeting */}
-        {isNewCaseMode || !activeCaseId ? (
-          <div className={styles.welcomeScreen}>
-            <span className={styles.welcomeIcon} aria-hidden="true">⚖️</span>
-            <h1 className={styles.welcomeTitle}>HarveySpecter Compliance Workspace</h1>
-            <p className={styles.welcomeText}>
-              Start a new audit chat. Drag and drop your Corporate Board Resolutions, Contracts, or Filing Documents here,
-              or select a file to cross-reference against 470 sections of the Companies Act, 2013.
-            </p>
-            
-            {/* Drag & Drop Target Area */}
-            <div
-              className={`${styles.welcomeDropzone} ${dragActive ? styles.welcomeDropzoneActive : ""}`}
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              id="drag-drop-zone"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.doc,.txt"
-                onChange={handleFileSelect}
-                style={{ display: "none" }}
-                id="workspace-file-picker"
-              />
-              <span className={styles.dropzoneIcon}>⬆️</span>
-              <p className={styles.dropzoneText}>Drag & drop audit document, or browse files</p>
-              <p className={styles.dropzoneSubtext}>Supports PDF, DOCX, TXT — Max 50MB</p>
-            </div>
-
-            {/* General Aggregated Stats Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", width: "100%", marginTop: "3rem" }}>
-              <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "1rem" }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text-primary)" }}>{totalCases}</div>
-                <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>Total Audits</div>
-              </div>
-              <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "1rem" }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-success)" }}>{avgCompliance}%</div>
-                <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>Avg Score</div>
-              </div>
-              <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "1rem" }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-warning)" }}>{inProgressCases}</div>
-                <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>In Progress</div>
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className={styles.errorBanner} style={{ marginTop: "1.5rem", background: "var(--color-error-muted)", border: "1px solid var(--color-error)", padding: "0.75rem", borderRadius: "var(--radius-md)", color: "var(--color-error-light)", fontSize: "var(--text-sm)" }}>
-                ⚠️ {errorMessage}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Active Chat Thread View */
-          <>
+        {/* Active Chat Thread View */}
+        <>
             {/* Header */}
             <header className={styles.chatHeader}>
               <div className={styles.chatHeaderInfo}>
@@ -791,10 +780,99 @@ function DashboardContent() {
                 <div className={`${styles.bubble} ${styles.bubbleAssistant}`}>
                   <div className={styles.bubbleContent}>
                     Hello! I am your legal assistant. I have connected to the knowledge base for the Companies Act, 2013.
-                    You can upload audit documents using the attachment icon below, or ask any compliance follow-up questions directly.
+                    You can ask any question about the Companies Act, 2013 <strong>straight away</strong> below, or drop/attach a document to start a compliance audit.
+                  </div>
+                  
+                  {/* Quick questions list inside welcome bubble */}
+                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: 600 }}>Quick Questions:</span>
+                    {[
+                      "What are the requirements for appointing a director?",
+                      "Explain Section 185 on loans to directors.",
+                      "What forms are needed for share transfer?",
+                      "What are the CSR compliance rules under Section 135?"
+                    ].map((q) => (
+                      <button
+                        key={q}
+                        style={{
+                          textAlign: "left",
+                          padding: "0.5rem 0.75rem",
+                          background: "var(--color-bg-surface)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "var(--text-xs)",
+                          color: "var(--color-primary-light)",
+                          transition: "all 0.2s"
+                        }}
+                        onClick={() => {
+                          setChatInput(q);
+                          chatInputRef.current?.focus();
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "var(--color-primary)";
+                          e.currentTarget.style.background = "var(--color-primary-muted)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "var(--color-border)";
+                          e.currentTarget.style.background = "var(--color-bg-surface)";
+                        }}
+                      >
+                        • {q}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
+
+              {/* Inline Drag & Drop Zone if no case selected or empty thread */}
+              {(!activeCaseId || chatMessages.length === 0) && !activeDocument && (
+                <div
+                  className={`${styles.welcomeDropzone} ${dragActive ? styles.welcomeDropzoneActive : ""}`}
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ maxWidth: "560px", margin: "1.5rem auto", padding: "1.5rem", width: "100%" }}
+                  id="chat-dropzone"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,.txt"
+                    onChange={handleFileSelect}
+                    style={{ display: "none" }}
+                    id="chat-file-input"
+                  />
+                  <span className={styles.dropzoneIcon} style={{ fontSize: "1.875rem", marginBottom: "0.5rem", display: "block", textAlign: "center" }}>⬆️</span>
+                  <p className={styles.dropzoneText} style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>Drag & drop audit document, or browse files</p>
+                  <p className={styles.dropzoneSubtext} style={{ fontSize: "10px", textAlign: "center" }}>Supports PDF, DOCX, TXT — Max 50MB</p>
+                </div>
+              )}
+
+              {/* General Aggregated Stats Grid (shown under dropzone when empty) */}
+              {(!activeCaseId || chatMessages.length === 0) && !activeDocument && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", maxWidth: "560px", width: "100%", margin: "0 auto 2rem" }}>
+                  <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)" }}>{totalCases}</div>
+                    <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>Total Audits</div>
+                  </div>
+                  <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-success)" }}>{avgCompliance}%</div>
+                    <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>Avg Score</div>
+                  </div>
+                  <div style={{ background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-warning)" }}>{inProgressCases}</div>
+                    <div style={{ fontSize: "0.688rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>In Progress</div>
+                  </div>
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className={styles.errorBanner} style={{ maxWidth: "560px", margin: "1rem auto", background: "var(--color-error-muted)", border: "1px solid var(--color-error)", padding: "0.75rem", borderRadius: "var(--radius-md)", color: "var(--color-error-light)", fontSize: "var(--text-sm)" }}>
+                  ⚠️ {errorMessage}
+                </div>
+              )}
 
               {/* Dynamic inline render of document file cards */}
               {activeDocument && (
@@ -1016,7 +1094,6 @@ function DashboardContent() {
               </button>
             </div>
           </>
-        )}
       </main>
 
       {/* ── RIGHT COLUMN: SLIDE-OUT REPORT DRAWER ── */}

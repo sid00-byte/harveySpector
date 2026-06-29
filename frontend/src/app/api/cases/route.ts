@@ -58,15 +58,17 @@ export async function POST(req: Request) {
         title,
         description: description || "",
         userId: session.user.id,
-        status: "analyzing",
-        documents: {
-          create: {
-            fileName: fileName || "Untitled Document",
-            fileType: fileType || "text",
-            fileSizeBytes: fileSizeBytes || 0,
-            status: "processing",
+        status: fileName ? "analyzing" : "completed",
+        ...(fileName ? {
+          documents: {
+            create: {
+              fileName: fileName,
+              fileType: fileType || "text",
+              fileSizeBytes: fileSizeBytes || 0,
+              status: "processing",
+            },
           },
-        },
+        } : {}),
       },
       include: {
         documents: true,
